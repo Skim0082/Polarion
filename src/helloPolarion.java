@@ -3,5 +3,6 @@ public String helloFunction(){
 
 
 	String test = "";
+	String mytest = "hello";
 	
 }
