@@ -102,7 +102,7 @@ public class LinkRoleCockpit extends RichPageWidget {
 	}
 	
 /**		
-* @wi.implements drivepilot/DP-529 make resourct traceability
+* @wi.implements drivepilot/DP-529 make resourct traceability add
 */
 	public void processParameterDependencies(@NotNull RichPageWidgetDependenciesContext context) {
         ObjectSelectorParameter targetDocumentParameter = context.parameter(PARAMETER_TARGET_DOCUMENT);
