@@ -1,0 +1,745 @@
+###############################################################################
+##
+## Work Item Status Chart : Work Completion Status Chart
+## Sungjoe Kim : 2017.09.13
+## Last Modified : 2017.10.04 - Rev 0.1
+## 
+###############################################################################
+#set( $defectStatusIds = $pageParameters.defectStatusIds.values())
+#set( $taskStatusIds = $pageParameters.taskStatusIds.values())
+#set( $chartWidth = $pageParameters.chartWidth.value())
+#set( $chartHeight = $pageParameters.chartHeight.value())
+#set( $chartTitle = $pageParameters.chartTitle.value())
+#set( $legendVertical = $pageParameters.legendVertical.value())
+#set( $chartLegendEnabled = $pageParameters.chartLegendEnabled.value())
+#set( $yAxisTickInterval = $pageParameters.yAxisTickInterval.value())
+#set( $workItemTypeId = $pageParameters.workItemTypeId.singleValue())
+#set( $displayScope = $pageParameters.displayScope.singleValue())
+#set( $displayRange = $pageParameters.displayRange.singleValue())
+#set( $azlRelease = $pageParameters.azlRelease.values())
+#set( $plannedIn = $pageParameters.plannedIn.values())
+#set( $startDateParam = $pageParameters.startDateParam.value())
+#set( $endDateParam = $pageParameters.endDateParam.value())
+
+#set( $iDataService = $trackerService.getDataService() )
+
+#set( $projectId = $page.reference.projectId)
+#set( $hoursPerDay = 8 )
+#set( $completedStatusId = "completed")
+#set( $dayAsMiliSecond  = 86400000 )
+
+#set( $global_OverwriteStartDate = $startDateParam )
+#set( $global_OverwriteEndDate = $endDateParam )
+
+#*
+Project ID : $projectId<br>
+Item Type ID : $workItemTypeId <br>
+Display Range : $displayRange <br>
+Display Scope : $displayScope <br>
+Start Date : $startDateParam <br>
+End Date : $endDateParam <br>
+*#
+
+#set( $statusIds_Array = [] )
+#if( $workItemTypeId.equals("task") )
+    #set( $statusIds_Array = $taskStatusIds )
+#else
+    #set( $statusIds_Array = $defectStatusIds )
+#end
+
+#set( $excludedStatusIds = "" )
+#foreach( $status in $statusIds_Array)
+    #if($velocityCount == 1)
+        #set( $excludedStatusIds = $status.id )
+    #else
+        #set( $excludedStatusIds = "$excludedStatusIds $status.id" )
+    #end
+#end
+##Excluded status Ids : $excludedStatusIds <br>
+
+#set( $plannedInIds = "" )
+#foreach( $plan in $plannedIn)
+    #if($velocityCount == 1)
+        #set( $plannedInIds = "$projectId/$plan.id" )
+    #else
+        #set( $plannedInIds = "$plannedInIds $projectId/$plan.id" )
+    #end
+#end
+##Planned In Ids : $plannedInIds <br>
+
+#set( $azlReleaseIds = "" )
+#foreach( $alz in $azlRelease)
+    #if($velocityCount == 1)
+        #set( $azlReleaseIds = "$alz.id" )
+    #else
+        #set( $azlReleaseIds = "$azlReleaseIds $alz.id" )
+    #end
+#end
+##AZL Release Ids : $azlReleaseIds <br>
+
+## Duration calculation with start date and end date
+#macro(calculateDaysDiff $startDateParam $endDateParam $outPutDaysDiff )
+    #set( $inputStartDate = $date.toDate('yyyy-MM-dd', $startDateParam) ) 
+    #set( $inputEndDate = $date.toDate('yyyy-MM-dd', $endDateParam) )  
+    #set( $dayTime = $dayAsMiliSecond.doubleValue() )         
+    #set( $daysDiff =   $math.roundTo(1, $math.div($math.sub($inputEndDate, $inputStartDate) , $dayTime )  ) ) 
+    #set( $outPutDaysDiff = $daysDiff.intValue() )
+#end
+
+#macro(convert2hours $timeInput $timeHours)
+    #set($len1 = $timeInput.length() )
+    #set($len2 = $len1 - 1 )
+    #set($timeUnit =  $timeInput.substring( $len2, $len1 ) )
+    #set($timeCount = 0 )
+    #set($timeCount = $timeInput.substring( 0, $len2 ) )
+    #set($timeAsHour = 0 )
+    #if($timeUnit.equals("d") )
+        #set($timeCount = $math.mul($timeCount, $hoursPerDay) )
+    #end 
+    #set($timeHours = $timeCount)
+#end
+
+## Checking which range of week the date with complated status is contained 
+## Range of week comes from Start Date and End Date by Unser input
+#macro(checkWithinDateRange $completeDateRange $weekRangeDateWithCompletedState $inputEndDate)
+
+    #set( $comparedCompletedDateRange = $date.toDate('yyyy-MM-dd', $completeDateRange ) )
+
+    #foreach( $dateRange in $displayDateRange_Array)
+
+        #set( $stringStartDateOfWeek = $displayDateRange_Array.get($math.sub($velocityCount, 1) ) )
+
+        #set( $weekDateRangeStart = $date.toDate('yyyy-MM-dd', $stringStartDateOfWeek ) )
+
+        #if( $velocityCount < $displayDateRange_Array.size() )
+            #set( $weekDateRangeEnd = $date.toDate('yyyy-MM-dd', $displayDateRange_Array.get($velocityCount) ) )
+        #else
+            ##set( $weekDateRangeEnd = $date.toDate('yyyy-MM-dd', $endDateParam ) )
+            #set( $weekDateRangeEnd = $date.toDate('yyyy-MM-dd', $global_OverwriteEndDate ) )
+        #end
+
+        #set( $daysDiffWeekStartDate = 0)
+        #set( $daysDiffWeekEndDate = 0)
+        ##### days Diff between complated date and week range start date
+        #calculateDaysDiff($weekDateRangeStart $comparedCompletedDateRange $daysDiffWeekStartDate)
+        ##### days Diff between completed date and week range end date
+        #calculateDaysDiff($comparedCompletedDateRange $weekDateRangeEnd $daysDiffWeekEndDate)
+        ##Completed Date: $comparedCompletedDateRange, Start Week Range Date : $weekDateRangeStart, End Week Range Date : $weekDateRangeEnd <br>
+        ##Day Diff Week Start Date : $daysDiffWeekStartDate, Day Diff Week End Date : $daysDiffWeekEndDate <br>
+        #if( $daysDiffWeekStartDate >= 0 && $daysDiffWeekEndDate > 0 )
+            #set( $weekRangeDateWithCompletedState = $stringStartDateOfWeek )
+        #end
+        #if( $daysDiffWeekStartDate < 0 && $daysDiffWeekEndDate > 0 )
+            #if(!$inputEndDate.equals(""))
+                #set( $daysDiffWeekEndDate = 0)
+                ##---------- $comparedCompletedDateRange $weekDateRangeEnd <br>
+                #calculateDaysDiff($comparedCompletedDateRange $global_OverwriteStartDate $daysDiffWeekEndDate)
+                #if($daysDiffWeekEndDate > 0)
+                    #set( $weekRangeDateWithCompletedState = $global_OverwriteStartDate)
+                #end
+            #end
+
+        #end
+
+    #end
+
+#end
+
+#macro(chekReleaseEndDate $input_alzReleaseStartDate $ouput_alzReleaseEndDate)
+    #set( $alZReleaseMonth = $date.getMonth($date.toDate('yyyy-MM-dd', $input_alzReleaseStartDate) ) ) 
+    #set( $alZReleaseYear = $date.getYear($date.toDate('yyyy-MM-dd', $input_alzReleaseStartDate) ) )         
+
+    #if( $alZReleaseMonth == 7 || $alZReleaseMonth == 9 || $math.mod($alZReleaseMonth, 2) == 0)
+        #set( $ouput_alzReleaseEndDate = "20${azlReleaseDate}-31")  
+    #elseif($alZReleaseMonth == 8 || $alZReleaseMonth == 10)
+        #set( $ouput_alzReleaseEndDate = "20${azlReleaseDate}-30")  
+    #end
+    #if($alZReleaseMonth == 1)
+        #set( $dayTime = $dayAsMiliSecond.doubleValue() )         
+        #set( $newDate = $math.sub($date.toDate('yyyy-MM-dd', "${alZReleaseYear}-03-01"), $dayTime) )
+        #set( $x = $date.toCalendar($newDate) )
+        #set( $myDate = $date.format('yyyy-MM-dd', $x.time) )
+        #set( $ouput_alzReleaseEndDate = "$myDate")  
+    #end
+#end
+
+#set( $inputDateRangeDiff = 0 )
+#set( $existInputDateRange = false)
+#if(!$startDateParam.trim().equals("") && !$endDateParam.trim().equals(""))
+    #calculateDaysDiff( $startDateParam $endDateParam $inputDateRangeDiff )
+    #set( $existInputDateRange = true)
+#end
+
+<style>
+  .alert {
+      padding: 15px;
+      margin-bottom: 20px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+  }
+  .alert-info {
+      color: #31708f;
+      background-color: #d9edf7;
+      border-color: #bce8f1;
+  }
+</style>
+
+#set($divWidth = $math.add($chartWidth, 50))
+#if( $existInputDateRange && $inputDateRangeDiff < 0 )
+    <div style="width:${divWidth}px;display: block;margin-top:30px;">
+      <div class="alert alert-info">
+        <strong>Info!</strong> End Date should be later than Start Date. Please check input date range.
+      </div>
+      <div style="width:100%;text-align:center;margin-top:10px;margin-bottom:10px;">
+        <span style="font-size:135%;font-weight:bold;">$chartTitle</span>
+      </div>
+      <div style="width:100%;text-align:center;margin-top:15px;margin-bottom:20px;">
+          <span style="font-size:100%;color:#666666;font-weight:bold;">No data to display</span>
+      </div>
+    </div>
+#elseif( ( $startDateParam.trim().equals("") && !$endDateParam.trim().equals("") ) || ( !$startDateParam.trim().equals("") && $endDateParam.trim().equals("")  ) )
+    <div style="width:${divWidth}px;display: block;margin-top:30px;">
+      <div class="alert alert-info">
+        <strong>Info!</strong> Both of Start Date and End Date should have date or should be empty.
+      </div>
+      <div style="width:100%;text-align:center;margin-top:10px;margin-bottom:10px;">
+        <span style="font-size:135%;font-weight:bold;">$chartTitle</span>
+      </div>
+      <div style="width:100%;text-align:center;margin-top:15px;margin-bottom:20px;">
+          <span style="font-size:100%;color:#666666;font-weight:bold;">No data to display</span>
+      </div>
+    </div>
+#else   ####if($inputDateRangeDiff < 0)
+
+    #set( $globalTotalInitTime = 0)
+    #set( $totalSpentTime = 0)
+    #set( $totalCompletedTime = 0)
+    #set( $isNoMachedInitialTimewithDateRange = true)
+
+    #set( $totalSpentTimeOfCompletedPerItemID_MapArray = $objectFactory.newMap() )
+    #set( $plannedInAZLReleaseStartEndDate_MapArray = $objectFactory.newMap() )
+
+    #set( $global_PlanOrReleaseStartDate = "" )
+    #set( $global_PlanOrReleaseEndDate = "" )
+    #set( $global_displayDateRange_Array = [] )
+
+    #set($query_ExcludedStatusIds = "")
+    #set($query_PlannedInIds = "")
+    #set($query_azlReleasedIds = "")
+
+    #if(!$excludedStatusIds.equals(""))
+        #set($query_ExcludedStatusIds = "AND NOT status:($excludedStatusIds)")
+    #end
+    #if(!$plannedInIds.equals(""))
+       #set($query_PlannedInIds = "AND PLAN:($plannedInIds)")
+    #end
+    #if(!$azlReleaseIds.equals(""))
+       #set($query_azlReleasedIds = "AND azlrelease.KEY:($azlReleaseIds)")
+    #end
+    
+    #if( $displayScope.equals("plannedIn") )
+        #set( $query = "project.id:($projectId) AND type:($workItemTypeId) $query_ExcludedStatusIds $query_PlannedInIds" )
+    #else
+        #set( $query = "project.id:($projectId) AND type:($workItemTypeId) $query_ExcludedStatusIds $query_azlReleasedIds" )
+    #end
+
+    #set( $queryResults = $trackerService.queryWorkItems($query, "id") ) 
+    ##Query : $query <br>
+    ##Result Size : $queryResults.size() <br><br>
+
+    #set( $unSortedDate = [] )
+
+    ## Check owverwrite date range 
+    #foreach($wi in $queryResults)
+
+        #if( $displayScope.equals("plannedIn") )
+            #foreach( $pl in $wi.getValue("plannedIn") )
+                #set($plannedInStartDate = $pl.getStartDate().toString().trim() ) 
+                #set($plannedInEndDate = $pl.getDueDate().toString().trim() ) 
+                ##save planned Date range to temp array with unsorted
+                #if( $unSortedDate.indexOf($plannedInStartDate) == -1)
+                    #set( $dummy = $unSortedDate.add($plannedInStartDate))
+                #end            
+                #if( $unSortedDate.indexOf($plannedInEndDate) == -1)
+                    #set( $dummy = $unSortedDate.add($plannedInEndDate))
+                #end
+            #end
+
+        #else
+
+            ##set( $azlReleaseStartDate_Array = [])
+
+            #set( $azlReleaseDate = $wi.getValue("azlrelease").getId() ) ##AZL Release Date : $azlReleaseDate <br>
+ 
+            ## $math.add($date.getMonth($date.toDate('yyyy-MM-dd', $plannedInStartDate) ), 1) 
+            #set( $alZReleaseStartDateFormat = "20${azlReleaseDate}-01")  
+            #set( $alZReleaseEndDateFormat = "")  
+   
+
+            #chekReleaseEndDate($alZReleaseStartDateFormat $alZReleaseEndDateFormat)
+
+            #*  
+            #set( $alZReleaseMonth = $date.getMonth($date.toDate('yyyy-MM-dd', $alZReleaseStartDateFormat) ) ) 
+            #set( $alZReleaseYear = $date.getYear($date.toDate('yyyy-MM-dd', $alZReleaseStartDateFormat) ) )             
+            #if( $alZReleaseMonth == 7 || $alZReleaseMonth == 9 || $math.mod($alZReleaseMonth, 2) == 0)
+                #set( $alZReleaseEndDateFormat = "20${azlReleaseDate}-31")  
+            #elseif($alZReleaseMonth == 8 || $alZReleaseMonth == 10)
+                #set( $alZReleaseEndDateFormat = "20${azlReleaseDate}-30")  
+            #end
+            #if($alZReleaseMonth == 1)
+                #set( $dayTime = $dayAsMiliSecond.doubleValue() )         
+                #set( $newDate = $math.sub($date.toDate('yyyy-MM-dd', "${alZReleaseYear}-03-01"), $dayTime) )
+                #set( $x = $date.toCalendar($newDate) )
+                #set( $myDate = $date.format('yyyy-MM-dd', $x.time) )
+                #set( $alZReleaseEndDateFormat = "$myDate")  
+            #end
+            *#
+
+            #if( $unSortedDate.indexOf($alZReleaseStartDateFormat) == -1)
+                #set( $dummy = $unSortedDate.add($alZReleaseStartDateFormat) )
+            #end    
+            #if( $unSortedDate.indexOf($alZReleaseEndDateFormat) == -1)
+                #set( $dummy = $unSortedDate.add($alZReleaseEndDateFormat) )
+            #end                               
+
+        #end
+
+    #end
+
+    ##UnSort Array: $unSortedDate <br>
+
+    #foreach($obj in $sorter.sort($unSortedDate))
+
+        #set( $daysDiffStartEndDate = 0 )
+        
+        #if( $velocityCount == 1)
+            #if($existInputDateRange)
+                #calculateDaysDiff($startDateParam $obj $daysDiffStartEndDate)
+                ##Start Diff : Input Start: $startDateParam, planned: $obj, diff: $daysDiffStartEndDate <br>
+                #if($daysDiffStartEndDate > 0 )
+                    #set( $global_OverwriteStartDate = $obj )
+                #end
+            #else
+                #set( $global_OverwriteStartDate = $obj )
+            #end
+        #elseif($velocityCount == $unSortedDate.size() )
+            #if($existInputDateRange)
+                #calculateDaysDiff($obj $endDateParam $daysDiffStartEndDate)
+                ##End Diff : Input End: $endDateParam, planned: $obj, diff: $daysDiffStartEndDate <br>
+                #if($daysDiffStartEndDate > 0 )
+                    #set( $global_OverwriteEndDate = $obj)
+                #end
+            #else
+                #set( $global_OverwriteEndDate = $obj )
+            #end                
+        #end
+    #end 
+
+    #set( $globalDurationDays = 0 )
+    #calculateDaysDiff( $global_OverwriteStartDate $global_OverwriteEndDate $globalDurationDays )
+    #set($globalDurationDays = $math.add($globalDurationDays, 1))
+    
+    ##Duration : $globalDurationDays day(s) ($global_OverwriteStartDate ~ $global_OverwriteEndDate) <br>
+
+    #set( $xAxisDateRange = $math.sub($globalDurationDays, 1))   
+    #if($displayRange.equals("week"))
+        #set( $dateRange = $math.div( $globalDurationDays, 7 ) )
+        #if( $math.mod( $globalDurationDays, 7 ) == 0 ) #set( $dateRange = $math.sub( $dateRange, 1 ) ) #end
+        #set($xAxisDateRange = $dateRange.intValue() )
+    #end
+
+    #set( $totalSpentTimeWithCompletedStatusPerDateRange_MapArray = $objectFactory.newMap() )
+    #set( $totalInitialTimePerDateRange_MapArray = $objectFactory.newMap() )
+
+    #set( $displayDateRange_Array = [] )
+    #foreach( $d in [0..$xAxisDateRange])           
+        #set( $addDayTime = $math.mul( $d.doubleValue(), $dayAsMiliSecond ) )
+        #if( $displayRange.equals("week")) #set( $addDayTime = $math.mul( $math.mul($d.doubleValue(), 7), $dayAsMiliSecond ) ) #end
+        #set( $newDate =  $math.add( $date.toDate('yyyy-MM-dd', $global_OverwriteStartDate) ,  $addDayTime) ) 
+        #set( $x = $date.toCalendar($newDate) )
+        #set( $myDate = $date.format('yyyy-MM-dd', $x.time) )
+        #set( $dummy = $totalSpentTimeWithCompletedStatusPerDateRange_MapArray.put($myDate, 0))
+        #set( $dummy = $totalInitialTimePerDateRange_MapArray.put($myDate, 0))
+        #set( $dummy = $displayDateRange_Array.add($myDate) )
+    #end 
+
+    #foreach($wi in $queryResults)
+        
+        #set( $wiId = $wi.getId() )
+        #set( $dummy = $totalSpentTimeOfCompletedPerItemID_MapArray.put($wiId, 0) )
+        #set( $alzRelease_withinDuration = false)
+        #set( $plannedInStartDate = "" )
+        #set( $plannedInEndDate = "" )
+        #set( $alZReleaseStartDateFormat = "")  
+        #set( $alZReleaseEndDateFormat = "")         
+
+        #if( $displayScope.equals("plannedIn") )
+            ##$wi.getId(), $wi.getValue("plannedIn").get(0).getId() ($wi.getValue("plannedIn").get(0).getStartDate() ~ $wi.getValue("plannedIn").get(0).getDueDate()), Status : $wi.getStatus().getId()   <br>  
+
+            #set( $plannedInStartDate_Array = [])
+            #foreach( $pl in $wi.getValue("plannedIn") )
+
+                ## #set($plannedInStartDate = $wi.getValue("plannedIn").get(0).getStartDate().toString() ) Planned In Start Date :$plannedInStartDate <br>
+                ## #set($plannedInEndDate = $wi.getValue("plannedIn").get(0).getDueDate().toString() ) Planned In Due Date :$plannedInEndDate <br>
+                #set($plannedInStartDate = $pl.getStartDate().toString().trim() ) ##Planned In Start Date :$plannedInStartDate <br>
+                #set($plannedInEndDate = $pl.getDueDate().toString().trim() ) ##Planned In Due Date :$plannedInEndDate <br>            
+
+                #if( !$plannedInAZLReleaseStartEndDate_MapArray.containsKey("$plannedInStartDate") )
+                    #set( $dummy = $plannedInAZLReleaseStartEndDate_MapArray.put("$plannedInStartDate", "$plannedInStartDate"))
+                    ###set( $dummy = $unSortedDate.add(  "$plannedInStartDate"   ) )
+                #end
+                #if( !$plannedInAZLReleaseStartEndDate_MapArray.containsKey("$plannedInEndDate") )
+                    #set( $dummy = $plannedInAZLReleaseStartEndDate_MapArray.put("$plannedInEndDate", "$plannedInEndDate"))
+                    ###set( $dummy = $unSortedDate.add(  "$plannedInEndDate") )
+                #end
+
+                #if( $plannedInStartDate_Array.indexOf($plannedInStartDate) == -1)
+                    #set( $dummy = $plannedInStartDate_Array.add($plannedInStartDate))
+                #end
+                #if( $plannedInStartDate_Array.indexOf($plannedInEndDate) == -1)
+                    #set( $dummy = $plannedInStartDate_Array.add($plannedInEndDate))
+                #end
+
+            #end
+
+            ## Sorting saved date of Planned In start / end Date
+            ## So assigned $plannedInStartDate to the earlist Start Date among multiple start dates
+            #foreach($obj in $sorter.sort($plannedInStartDate_Array))
+                #if($velocityCount == 1)
+                    #set( $plannedInStartDate = $obj )                    
+                #end
+            #end        
+
+        #else
+
+            ###### When selected AZL Release
+
+            ##$wi.getId(), Release: $wi.getValue("azlrelease").getId(), Status : $wi.getStatus().getId() , 
+            ##Init Time: $timeInit, Spent Time: $timeSpent, Remaining Time: $timeRemaining, Total Time: $globalTotalInitTime (hrs) <br>
+
+            #set( $azlReleaseStartDate_Array = [])
+
+            #set( $azlReleaseDate = $wi.getValue("azlrelease").getId() ) ##AZL Release Date : $azlReleaseDate <br>
+            #if( !$plannedInAZLReleaseStartEndDate_MapArray.containsKey($azlReleaseDate) )
+                #set( $dummy = $plannedInAZLReleaseStartEndDate_MapArray.put($azlReleaseDate, $azlReleaseDate) )
+                ## #set( $dummy = $unSortedDate.add(  "$azlReleaseDate"  ) )
+            #end
+
+            #if( $azlReleaseStartDate_Array.indexOf($azlReleaseDate) == -1)
+                #set( $dummy = $azlReleaseStartDate_Array.add($azlReleaseDate) )
+            #end  
+
+            ## $math.add($date.getMonth($date.toDate('yyyy-MM-dd', $plannedInStartDate) ), 1) 
+            #set( $alZReleaseStartDateFormat = "20${azlReleaseDate}-01")  
+            #set( $alZReleaseEndDateFormat = "")  
+  
+
+            #chekReleaseEndDate($alZReleaseStartDateFormat $alZReleaseEndDateFormat)
+
+            #*    
+            #set( $alZReleaseMonth = $date.getMonth($date.toDate('yyyy-MM-dd', $alZReleaseStartDateFormat) ) ) 
+            #set( $alZReleaseYear = $date.getYear($date.toDate('yyyy-MM-dd', $alZReleaseStartDateFormat) ) )            
+            #if( $alZReleaseMonth == 7 || $alZReleaseMonth == 9 || $math.mod($alZReleaseMonth, 2) == 0)
+                #set( $alZReleaseEndDateFormat = "20${azlReleaseDate}-31")  
+            #elseif($alZReleaseMonth == 8 || $alZReleaseMonth == 10)
+                #set( $alZReleaseEndDateFormat = "20${azlReleaseDate}-30")  
+            #end
+            #if($alZReleaseMonth == 1)
+                #set( $dayTime = $dayAsMiliSecond.doubleValue() )         
+                #set( $newDate = $math.sub($date.toDate('yyyy-MM-dd', "${alZReleaseYear}-03-01"), $dayTime) )
+                #set( $x = $date.toCalendar($newDate) )
+                #set( $myDate = $date.format('yyyy-MM-dd', $x.time) )
+                #set( $alZReleaseEndDateFormat = "$myDate")  
+            #end
+            *#
+
+            #set( $daysDiffWeekStartDate = 0)
+            #set( $daysDiffWeekEndDate = 0)
+
+            #set( $weekDateRangeStart = $date.toDate('yyyy-MM-dd', $global_OverwriteStartDate) ) 
+            #set( $weekDateRangeEnd = $date.toDate('yyyy-MM-dd', $global_OverwriteEndDate) )  
+
+            ##-------Start Date : $alZReleaseStartDateFormat, End date : $alZReleaseEndDateFormat <br>
+
+            #calculateDaysDiff($global_OverwriteStartDate $alZReleaseStartDateFormat $daysDiffWeekStartDate)
+            #calculateDaysDiff($alZReleaseEndDateFormat $global_OverwriteEndDate $daysDiffWeekEndDate)
+
+            ##$daysDiffWeekStartDate , $daysDiffWeekEndDate <br>
+
+            #if( $daysDiffWeekStartDate >= 0 && $daysDiffWeekEndDate >= 0 )
+                #set( $alzRelease_withinDuration = true)
+            #end        
+            #if( $daysDiffWeekStartDate < 0 && $daysDiffWeekEndDate >= 0 )
+                #set( $alzRelease_withinDuration = true)
+            #end  
+            #if( $daysDiffWeekStartDate < 0 && $daysDiffWeekEndDate < 0 )
+                #set( $alzRelease_withinDuration = true)
+            #end 
+        #end
+
+        ## Get Initial Time and Convert hourly time if daily time 
+        #set( $iniTime = "$!wi.getValue('initialEstimate').toString()" ) 
+        #set( $timeInit = 0 )
+        #if( !$iniTime.equals("") )
+            #convert2hours($iniTime $timeInit)
+        #end
+
+        ## Get Spent time and Convert hourly time if daily time
+        #set( $spentTime = "$!wi.getValue('timeSpent').toString()" ) 
+        #set( $timeSpent = 0 )    
+        #if( !$spentTime.equals("") )
+            #convert2hours($spentTime $timeSpent)
+        #end
+        
+        ## Calculate Remaining time with Initial and Spent time
+        #set( $timeRemaining = 0 ) 
+        #set( $timeRemaining = $math.sub($timeInit, $timeSpent) )
+
+        ## Calculate total Initial Time as per each work item selected
+        #set( $dateRangeWithTotalInitTime = "")
+        #set( $PlanOrReleaseStartDate = "" )
+        #set( $PlanOrReleaseEndDate = "" )
+
+        #if( $displayScope.equals("plannedIn") )    
+            #set( $PlanOrReleaseStartDate = "$plannedInStartDate" )
+            #set( $PlanOrReleaseEndDate = "$plannedInEndDate" )
+        #else
+            #if( $alzRelease_withinDuration == true )
+                #set( $PlanOrReleaseStartDate = $alZReleaseStartDateFormat )
+                #set( $PlanOrReleaseEndDate = $alZReleaseEndDateFormat )
+            #end
+        #end
+
+        ##Start Date: $PlanOrReleaseStartDate  , End Date: $PlanOrReleaseEndDate <br>
+
+        #if( !$PlanOrReleaseStartDate.equals("") )
+            #checkWithinDateRange( $PlanOrReleaseStartDate $dateRangeWithTotalInitTime $PlanOrReleaseEndDate )
+        #end
+
+         ##--- Date Range : $dateRangeWithTotalInitTime, Plan or Release Start: $PlanOrReleaseStartDate, Plan or Release End : $PlanOrReleaseEndDate  <br>
+
+        #if(!$dateRangeWithTotalInitTime.equals(""))
+
+        ###--- Planed Start Date: $PlanOrReleaseStartDate, Date Range: $dateRangeWithTotalInitTime <br>
+
+            ##calculate init time based on duration of Planned per work item
+            #set( $daysDiffPlannedIn = 0 )
+            #calculateDaysDiff($PlanOrReleaseStartDate $PlanOrReleaseEndDate $daysDiffPlannedIn)
+            #set( $daysDiffOverwritePlanedIn = 0 )
+            #calculateDaysDiff($dateRangeWithTotalInitTime $PlanOrReleaseEndDate $daysDiffOverwritePlanedIn) 
+            ##Before Inint Time : $timeInit ,    
+            #if( $daysDiffPlannedIn > $daysDiffOverwritePlanedIn ) 
+                #set( $timeInit = $math.div( $math.mul( $daysDiffOverwritePlanedIn, $timeInit), $daysDiffPlannedIn))
+                #set( $timeSpent = $math.div( $math.mul( $daysDiffOverwritePlanedIn, $timeSpent), $daysDiffPlannedIn))
+                #set( $timeRemaining = $math.sub($timeInit, $timeSpent) )
+            #end 
+            ##After Inint Time : $timeInit <br>
+
+            #set( $globalTotalInitTime = $math.add($globalTotalInitTime, $timeInit) ) 
+
+            ##<b>$wi.getId()</b>, Init Time: $timeInit, Spent Time: $timeSpent, Remaining Time: $timeRemaining, Total Time: <b>$globalTotalInitTime</b> (hrs), $wi.getValue("azlrelease").getId() <br>
+
+
+
+            ## Planned StartDate : $plannedInStartDate, Date Range : $dateRangeWithTotalInitTime, InitTime : $timeInit <br>
+            #if( $totalInitialTimePerDateRange_MapArray.containsKey($dateRangeWithTotalInitTime) )
+                #set( $dummy = $totalInitialTimePerDateRange_MapArray.put( $dateRangeWithTotalInitTime, $math.add($totalInitialTimePerDateRange_MapArray.get($dateRangeWithTotalInitTime), $timeInit ) ) )
+            #else
+                #set( $dummy = $totalInitialTimePerDateRange_MapArray.put( $dateRangeWithTotalInitTime, $timeInit ) )
+            #end  
+            #set( $isNoMachedInitialTimewithDateRange = false ) 
+        #end    
+
+        ## Check item if completed status or not
+        #set( $wiStatus = $wi.getStatus().getId() )
+        #if($wiStatus.equals("$completedStatusId"))
+            ## Get the date when completed using history
+            #set($wiHistory = $iDataService.getObjectHistory($wi))
+            #set( $isCheckedCompletedDate = false )
+            #foreach($wiIterator in $wiHistory)
+              #set( $cnt = $velocityCount - 1 )
+              #set( $wiRev = $!wiHistory.get($cnt))
+              #set( $wiRevStatusId = $wiRev.getStatus().getId())        
+
+              #if($wiRevStatusId.equals("$completedStatusId") && $isCheckedCompletedDate == false )
+                 
+                 ##----<b>$wi.getId()</b>, I Rev: $wiRev.getRevision(), $wiRevStatusId at $date.format('yyyy-MM-dd', $wiRev.getUpdated()) <br>  
+
+                #set( $completedDate = $date.toDate('yyyy-MM-dd', $date.format('yyyy-MM-dd 00:00:00', $wiRev.getUpdated()) ) ) ## Completed Date : $date.format('yyyy-MM-dd', $wiRev.getUpdated()) <br>
+
+                #set( $completeDateRange = $date.format('yyyy-MM-dd', $wiRev.getUpdated()) )
+
+                #set($dateRangeWithCompletedState = "")
+                #if($displayRange.equals("day"))
+                    ### add spent time with completed status per day range
+                    #set( $dateRangeWithCompletedState = $completeDateRange )
+                #else
+                    ### when week range, compare completed date with range of week            
+                    #checkWithinDateRange( $completeDateRange $dateRangeWithCompletedState "")
+
+                #end
+                #if( $totalSpentTimeWithCompletedStatusPerDateRange_MapArray.containsKey($dateRangeWithCompletedState) )
+                    #set( $dummy = $totalSpentTimeWithCompletedStatusPerDateRange_MapArray.put( $dateRangeWithCompletedState, $math.add($totalSpentTimeWithCompletedStatusPerDateRange_MapArray.get($dateRangeWithCompletedState), $timeSpent ) ) )
+                #else
+                    #set( $dummy = $totalSpentTimeWithCompletedStatusPerDateRange_MapArray.put( $dateRangeWithCompletedState, $timeSpent ) )
+                #end  
+                           
+                #set( $isCheckedCompletedDate = true ) 
+              #end
+
+            #end  
+            
+            #set($dummy = $totalSpentTimeOfCompletedPerItemID_MapArray.put($wiId, $timeSpent.intValue() ))
+
+        #end
+
+    #end
+
+    ### Burn Up Chart combining bar chart, line chart and area chart ###
+    <div style="width:${divWidth}px;display: block;margin-top:30px;">
+
+        #set( $labelStep = 1 )
+        #set( $dataLabelEnabled = "true" )
+        #if($displayRange.equals("day") && $displayDateRange_Array.size() > 20 ) 
+            #set( $labelStep = 7 ) 
+            #set( $dataLabelEnabled = "false" ) 
+        #end        
+
+        #set( $chart4 = $widgetContext.createChartBuilder())
+        #set( $html = $renderingContext.createHtmlFragmentBuilder())
+
+        #set( $dummy = $chart4.title("<b>$chartTitle</b>") )
+        #set( $dummy = $chart4.build().xAxis().categories($displayDateRange_Array) ) 
+        #set( $dummy = $!chart4.build().yAxis().title().text('') )
+        #set( $dummy = $!chart4.build().yAxis().gridLineWidth(1) )  
+        #set( $dummy = $!chart4.build().xAxis().addRawAttribute("labels", "{rotation: -70, step: $labelStep}") )
+        #set( $dummy = $!chart4.build().yAxis().addRawAttribute("lineWidth", "1") )
+        #set( $dummy = $!chart4.build().yAxis().addRawAttribute("tickInterval", "$yAxisTickInterval") )
+
+        ## Total Initial Time
+        #set( $serie3 = $chart4.build().series().add().name('Total').color('#53CCB1') )
+        $serie3.addRawAttribute("tooltip", "{pointFormat: '{series.name} : <b>{point.y:.2f}</b>'}")
+        $serie3.type().line()
+        #set($sumlInitTimePerDateRange = 0)
+        #set($preTotalInitTime = 0)       
+        
+        #foreach( $dateRange in $displayDateRange_Array)
+        
+        ##$isNoMachedInitialTimewithDateRange , $dateRange, $totalInitialTimePerDateRange_MapArray.get($dateRange) <br>
+        
+            #if($isNoMachedInitialTimewithDateRange)
+                #set( $dummy = $serie3.data().add().y($globalTotalInitTime) )
+            #else
+                #if($totalInitialTimePerDateRange_MapArray.get($dateRange) == 0 )
+                    #set( $dummy = $serie3.data().add().y($preTotalInitTime) )
+                #else
+                    #set( $sumlInitTimePerDateRange = $math.add( $sumlInitTimePerDateRange, $totalInitialTimePerDateRange_MapArray.get($dateRange) ) )
+                    #set( $dummy = $serie3.data().add().y($sumlInitTimePerDateRange) )
+                    #set($preTotalInitTime = $sumlInitTimePerDateRange)
+                #end
+            #end
+        #end
+
+        ## Total spent time with completed status
+        #set( $serie4 = $chart4.build().series().add().name('Completed').color('#1D9BD6') )
+        $serie4.addRawAttribute("fillColor", "'rgba(225, 240, 255, 0.5)'")
+        $serie4.addRawAttribute("tooltip", "{pointFormat: '{series.name} : <b>{point.y:.2f}</b>'}")
+        $serie4.type().area()
+        #set($accumulatedSpentTime = 0)
+        #foreach( $dateRange in $displayDateRange_Array)
+            #set( $completedSpentTime = $totalSpentTimeWithCompletedStatusPerDateRange_MapArray.get($dateRange) )
+            #set( $accumulatedSpentTime = $math.add($accumulatedSpentTime, $completedSpentTime))
+            #set( $dummy = $serie4.data().add().y($accumulatedSpentTime) )
+        #end
+
+
+        ##Ideal Time Line
+        #set( $serie5 = $chart4.build().series().add().name('Ideal').color('#BADCE5') )
+        $serie5.type().line()
+        $serie5.dashType().shortDot()
+        $serie5.addRawAttribute("dataLabels", "{color:'#aeaeae',format: '{y:.0f}'}")  
+        $serie5.addRawAttribute("tooltip", "{pointFormat: '{series.name} : <b>{point.y:.0f}</b>'}")
+        #set( $totalWorkingDays = 0 )
+        #set( $totalWeeks = 0 )
+        #set( $arraySize = $displayDateRange_Array.size() )
+        #if($displayRange.equals("week"))
+
+            #set( $totalWeeks = $math.div($globalDurationDays, 7))
+            #set( $totalWeeks = $totalWeeks.intValue())
+
+            #if($math.mod($globalDurationDays, 7) == 0)
+
+                #set( $totalWorkingDays = $math.mul($totalWeeks, 5) )
+
+                #foreach( $dateRange in $displayDateRange_Array)
+                    
+                    #set( $idealTime = $math.roundTo(1, $math.div($math.mul( $globalTotalInitTime, $velocityCount ), $arraySize ) ) )
+                    #set( $dummy = $serie5.data().add().y($idealTime) )
+                #end
+
+            #else
+
+                #set( $totalWorkingDays = $math.add( $math.mul($totalWeeks, 5) , $math.sub($globalDurationDays, $math.mul($totalWeeks, 7) ) )  )
+                #set( $idealTimePerOneWorkingDay = $math.div( $globalTotalInitTime, $totalWorkingDays ) )
+                #set( $idealTimePerFiveWorkingDays = $math.mul($idealTimePerOneWorkingDay, 5 ))
+                #set( $leftDaysLessThanFiveDays = $math.sub($globalDurationDays, $math.mul($totalWeeks, 7) ) )
+                #set( $idealTimeOverLeftDays = $math.mul($idealTimePerOneWorkingDay, $leftDaysLessThanFiveDays ))
+
+                ##Total Weeks : $totalWeeks , Left Days : $leftDaysLessThanFiveDays, Left Time :  $idealTimeOverLeftDays <br>
+
+                #set( $sumFiveWorkingDays = 0 )
+                #foreach( $dateRange in $displayDateRange_Array)
+                    #if($velocityCount == $arraySize )
+                        #set( $idealTimeOverLeftDays = $idealTimeOverLeftDays )
+                        #set( $sumFiveWorkingDays = $math.roundTo(1, $math.add($sumFiveWorkingDays,$idealTimeOverLeftDays ) ) )
+                        #set( $dummy = $serie5.data().add().y($sumFiveWorkingDays) )
+                    #else
+                        #set( $sumFiveWorkingDays = $math.roundTo(1, $math.mul($idealTimePerFiveWorkingDays, $velocityCount)) )
+                        #set( $dummy = $serie5.data().add().y($sumFiveWorkingDays) )
+                    #end
+                #end
+
+            #end
+        #else
+            ## Day display date range
+            #set($totalWeekendDays = 0 )
+            #foreach( $dateRange in $displayDateRange_Array)
+                #set( $dayOfWeek = $date.toDate('yyyy-MM-dd', $dateRange).toString().substring(0, 3) )
+                #if($dayOfWeek.equals("Sat") || $dayOfWeek.equals("Sun"))
+                    #set($totalWeekendDays = $math.add($totalWeekendDays, 1) )
+                #end            
+            #end
+            #set( $totalWorkingDays = $math.sub( $arraySize, $totalWeekendDays ) )
+            #set( $idealTimePerOneWorkingDay = $math.div( $globalTotalInitTime, $totalWorkingDays ) )
+            
+            #set($previousIdealTime = 0)
+            #set($sumOfIdealTime = 0)
+            #foreach( $dateRange in $displayDateRange_Array)
+                #set( $dayOfWeek = $date.toDate('yyyy-MM-dd', $dateRange).toString().substring(0, 3) )
+
+                #if($dayOfWeek.equals("Sat") || $dayOfWeek.equals("Sun") )
+                    #set( $dummy = $serie5.data().add().y($previousIdealTime) )
+                #else
+                    #set( $sumOfIdealTime = $math.add($sumOfIdealTime, $idealTimePerOneWorkingDay) )
+                    #set( $dummy = $serie5.data().add().y($sumOfIdealTime) )
+                    #set($previousIdealTime = $sumOfIdealTime)
+                #end
+                
+            #end
+
+        #end 
+
+        $chart4.build().plotOptions().series().addRawAttribute("dataLabels", "{enabled: $dataLabelEnabled, format: '<b>{y:.0f}</b>', padding:5}")
+        $chart4.build().plotOptions().series().addRawAttribute("tooltip", "{pointFormat: '{series.name} : <b>{point.y}</b>', valueSuffix:''}")
+        $chart4.build().plotOptions().series().addRawAttribute("animation", "{enabled: true}")
+        $chart4.build().plotOptions().series().addRawAttribute("cursor", "'pointer'")
+        $chart4.build().plotOptions().series().addRawAttribute("showInLegend", "$chartLegendEnabled")
+        #if($legendVertical)
+            #set( $cdummy = $chart4.build().legend().layout("vertical").align("right").verticalAlign("middle").itemMarginTop(10) )
+        #end
+        $!chart4.build().render($html, $chartHeight, $chartWidth)   
+        $html
+
+    <div>        
+
+#end  ###if($inputDateRangeDiff < 0)
