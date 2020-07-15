@@ -1,26 +1,27 @@
 /*
- * $Revision$
- *
- * Copyright (C) 2004-20012 Polarion Software
- * All rights reserved.
- * Email: info@polarion.com
- *
- *
- * Copyright (C) 2004-20012 Polarion Software
- * All Rights Reserved.  No use, copying or distribution of this
- * work may be made except in accordance with a valid license
- * agreement from Polarion Software.  This notice must be
- * included on all copies, modifications and derivatives of this
- * work.
- *
- * Polarion Software MAKES NO REPRESENTATIONS OR WARRANTIES 
- * ABOUT THE SUITABILITY OF THE SOFTWARE, EITHER EXPRESSED OR IMPLIED, 
- * INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. POLARION SOFTWARE
- * SHALL NOT BE LIABLE FOR ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT
- * OF USING, MODIFYING OR DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES.
- *
- */
+Â * $Revision$
+Â *
+Â * Copyright (C) 2004-20012 Polarion Software
+Â * All rights reserved.
+Â * Email: info@polarion.com
+Â *
+Â *
+Â * Copyright (C) 2004-20012 Polarion Software
+Â * All Rights Reserved.Â  No use, copying or distribution of this
+Â * work may be made except in accordance with a valid license
+Â * agreement from Polarion Software.Â  This notice must be
+Â * included on all copies, modifications and derivatives of this
+Â * work.
+Â *
+Â * Polarion Software MAKES NO REPRESENTATIONS OR WARRANTIES 
+Â * ABOUT THE SUITABILITY OF THE SOFTWARE, EITHER EXPRESSED OR IMPLIED, 
+Â * INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY,
+Â * FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. POLARION SOFTWARE
+Â * SHALL NOT BE LIABLE FOR ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT
+Â * OF USING, MODIFYING OR DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES.
+Â *
+ * Edit the source code
+Â */
 package com.polarion.workflow.function.automation.functions;
 
 import org.apache.log4j.Logger;
