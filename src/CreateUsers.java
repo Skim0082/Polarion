@@ -48,6 +48,7 @@ import com.polarion.platform.core.PlatformContext;
 /**
  * @author Stefan Schuck
  * @version ALPHA $Revision$ $Date$
+ * @wi.implements SPOC-1555 , add a java file init ver
  */
 public class CreateUsers implements IFunction {
 
