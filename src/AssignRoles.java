@@ -45,6 +45,7 @@ import com.polarion.platform.core.PlatformContext;
 /**
  * @author Stefan Schuck
  * @version ALPHA $Revision$ $Date$
+ * @wi.implements SPOC-1555 adding java file
  */
 public class AssignRoles implements IFunction {
 
