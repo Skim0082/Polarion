@@ -26,7 +26,6 @@ import org.jetbrains.annotations.NotNull;
 import com.polarion.alm.shared.api.SharedContext;
 import com.polarion.alm.shared.api.model.rp.widget.RichPageWidgetContext;
 import com.polarion.alm.shared.api.model.rp.widget.RichPageWidgetRenderingContext;
-/* @wi drivepilot/DP-529	*/
 public class BurnUpChartWidget extends AbstractBurnChartWidget {
 
     public static final String ID = "com.polarion.burnUpChart"; //$NON-NLS-1$
