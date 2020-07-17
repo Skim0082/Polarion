@@ -31,7 +31,7 @@ import com.polarion.alm.tracker.model.IWorkItem;
 import com.polarion.platform.core.PlatformContext;
 import com.polarion.platform.persistence.model.IPObjectList;
 /*
-* @wi.implements SPOC-1555 , add java 
+* @wi.implements SPOC-1555 add java 
 */
 public class LinkRoleCockpit extends RichPageWidget {
 	
