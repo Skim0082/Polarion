@@ -37,6 +37,7 @@ import com.polarion.workflow.function.automation.functions.AssignAuthor;
  * @author Stefan Schuck
  * @version ALPHA $Revision$ $Date$
  * @wi.implements SPOC-1716 from GitHub
+ * edif source code
  */
 public class AssignAuthor implements IFunction {
 
